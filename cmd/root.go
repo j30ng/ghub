@@ -5,7 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
+
+	config "github.com/j30ng/ghub/cmd/config"
 	homedir "github.com/mitchellh/go-homedir"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -31,6 +34,8 @@ func init() {
 	description := "config file (default is $HOME/.config/ghub/ghub.yaml)"
 
 	RootCmd.PersistentFlags().StringVar(&ConfigFile, "config", defaultConfigFile, description)
+
+	RootCmd.AddCommand(config.ConfigCmd)
 }
 
 func initConfig() {

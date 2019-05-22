@@ -1,4 +1,4 @@
-package cmd
+package config
 
 import (
 	"errors"
@@ -9,8 +9,8 @@ import (
 )
 
 var currentProfileCmd = &cobra.Command{
-	Use:   "create-profile",
-	Short: "Create a ghub profile.",
+	Use:   "current-profile",
+	Short: "Prints out current profile.",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return errors.New("create-profile action takes no arguments.")
@@ -27,5 +27,5 @@ var currentProfileCmd = &cobra.Command{
 }
 
 func init() {
-	configCmd.AddCommand(currentProfileCmd)
+	ConfigCmd.AddCommand(currentProfileCmd)
 }
