@@ -5,10 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/j30ng/ghub/cmd/config"
+	"github.com/j30ng/ghub/cmd/list"
+	"github.com/j30ng/ghub/cmd/raw"
 
-	config "github.com/j30ng/ghub/cmd/config"
 	homedir "github.com/mitchellh/go-homedir"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -35,7 +36,9 @@ func init() {
 
 	RootCmd.PersistentFlags().StringVar(&ConfigFile, "config", defaultConfigFile, description)
 
-	RootCmd.AddCommand(config.ConfigCmd)
+	RootCmd.AddCommand(list.Cmd)
+	RootCmd.AddCommand(raw.Cmd)
+	RootCmd.AddCommand(config.Cmd)
 }
 
 func initConfig() {
@@ -60,3 +63,4 @@ func getHomeDirectory() string {
 	}
 	return home
 }
+
