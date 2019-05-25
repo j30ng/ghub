@@ -12,8 +12,8 @@ import (
 var issueCmd = &cobra.Command{
 	Use:   "issue",
 	Short: "List issues.",
-	Args: issueArgs,
-	RunE: issueRunE,
+	Args:  issueArgs,
+	RunE:  issueRunE,
 }
 
 func init() {
@@ -32,22 +32,22 @@ func issueArgs(cmd *cobra.Command, args []string) error {
 	switch {
 	case issueState.Author != "" && !issueState.Mine:
 	case issueState.Author != "" && issueState.Mine:
-		return errors.New("Don't mix --mine and --author.")
+		return errors.New("Mixed use of --mine and --author")
 	case issueState.Author == "" && !issueState.Mine:
 		issueState.Mine = true
 		fallthrough
 	case issueState.Author == "" && issueState.Mine:
-		if selectedProfile, err := profile.GetSelectedProfile(); err != nil {
+		selectedProfile, err := profile.SelectedProfile()
+		if err != nil {
 			return err
-		} else {
-			issueState.Author = selectedProfile.Userid
 		}
+		issueState.Author = selectedProfile.Userid
 	}
 	return nil
 }
 
 func issueRunE(cmd *cobra.Command, args []string) error {
-	profile, err := profile.GetSelectedProfile()
+	profile, err := profile.SelectedProfile()
 	if err != nil {
 		return errors.New("An error occurred while loading profile.\n\n" + err.Error())
 	}
@@ -58,4 +58,3 @@ func issueRunE(cmd *cobra.Command, args []string) error {
 	fmt.Println(response)
 	return nil
 }
-

@@ -12,8 +12,8 @@ import (
 var prCmd = &cobra.Command{
 	Use:   "pr",
 	Short: "List pull requests.",
-	Args: prArgs,
-	RunE: prRunE,
+	Args:  prArgs,
+	RunE:  prRunE,
 }
 
 func init() {
@@ -32,22 +32,22 @@ func prArgs(cmd *cobra.Command, args []string) error {
 	switch {
 	case prState.Author != "" && !prState.Mine:
 	case prState.Author != "" && prState.Mine:
-		return errors.New("Don't explicitly mix --mine and --author.")
+		return errors.New("Explicit mixed use of --mine and --author")
 	case prState.Author == "" && !prState.Mine:
 		prState.Mine = true
 		fallthrough
 	case prState.Author == "" && prState.Mine:
-		if selectedProfile, err := profile.GetSelectedProfile(); err != nil {
+		selectedProfile, err := profile.SelectedProfile()
+		if err != nil {
 			return err
-		} else {
-			prState.Author = selectedProfile.Userid
 		}
+		prState.Author = selectedProfile.Userid
 	}
 	return nil
 }
 
 func prRunE(cmd *cobra.Command, args []string) error {
-	profile, err := profile.GetSelectedProfile()
+	profile, err := profile.SelectedProfile()
 	if err != nil {
 		return errors.New("An error occurred while loading profile.\n\n" + err.Error())
 	}
@@ -59,4 +59,3 @@ func prRunE(cmd *cobra.Command, args []string) error {
 	fmt.Println(response)
 	return nil
 }
-

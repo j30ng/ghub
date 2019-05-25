@@ -12,8 +12,8 @@ import (
 var selectProfileCmd = &cobra.Command{
 	Use:   "select-profile",
 	Short: "Select a ghub profile.",
-	Args: selectProfileArgs,
-	RunE: selectProfileRunE,
+	Args:  selectProfileArgs,
+	RunE:  selectProfileRunE,
 }
 
 func init() {
@@ -22,7 +22,7 @@ func init() {
 
 func selectProfileArgs(cmd *cobra.Command, args []string) error {
 	if len(args) != 1 {
-		return errors.New("profile name must be given for the action select-profile.")
+		return errors.New("No profile name is given for the command select-profile")
 	}
 	return nil
 }
@@ -32,7 +32,6 @@ func selectProfileRunE(cmd *cobra.Command, args []string) error {
 	if err := profile.SetSelectedProfile(givenProfileName); err != nil {
 		return errors.New("An Error occurred trying to select profile.\n\n" + err.Error())
 	}
-	fmt.Println("Selected profile "+givenProfileName+".")
+	fmt.Println("Selected profile " + givenProfileName + ".")
 	return nil
 }
-

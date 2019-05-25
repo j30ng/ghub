@@ -13,7 +13,7 @@ import (
 var createProfileCmd = &cobra.Command{
 	Use:   "create-profile --token [token]",
 	Short: "Create a ghub profile.",
-	RunE:   createProfileRunE,
+	RunE:  createProfileRunE,
 }
 
 func init() {
@@ -32,17 +32,17 @@ func init() {
 var newProfile profile.Profile
 
 func createProfileRunE(cmd *cobra.Command, args []string) error {
-	completeNameAndId()
-	created, err := profile.CreateProfile(newProfile)
+	completeNameAndID()
+	created, err := profile.Create(newProfile)
 	if err != nil {
 		return errors.New("An error occurred while creating profile.\n\n" + err.Error())
 	}
-	fmt.Println(fmt.Sprintf("Created profile %s. To use it, select it by executing:\n\n" +
+	fmt.Println(fmt.Sprintf("Created profile %s. To use it, select it by executing:\n\n"+
 		"  ghub config select-profile %s", created.Name, created.Name))
 	return nil
 }
 
-func completeNameAndId() error {
+func completeNameAndID() error {
 	user, err := root.User(newProfile)
 	if err != nil {
 		return err
@@ -55,11 +55,11 @@ func completeNameAndId() error {
 		return nil
 	}
 
-	if availableName, err := availableProfileName(newProfile.Userid); err != nil {
+	availableName, err := availableProfileName(newProfile.Userid)
+	if err != nil {
 		return err
-	} else {
-		newProfile.Name = availableName
 	}
+	newProfile.Name = availableName
 	return nil
 }
 
@@ -75,4 +75,3 @@ func availableProfileName(userid string) (string, error) {
 	}
 	return "", nil
 }
-

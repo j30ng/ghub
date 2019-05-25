@@ -14,15 +14,16 @@ import (
 	"github.com/spf13/viper"
 )
 
-var ConfigFile string
+var configFile string
 
-var RootCmd = &cobra.Command{
+var rootCmd = &cobra.Command{
 	Use:   "ghub",
 	Short: "A simple wrapper for GitHub REST API calls.",
 }
 
+// Execute executes the command.
 func Execute() {
-	if err := RootCmd.Execute(); err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -34,20 +35,20 @@ func init() {
 	defaultConfigFile := getHomeDirectory() + "/.config/ghub/ghub.yaml"
 	description := "config file (default is $HOME/.config/ghub/ghub.yaml)"
 
-	RootCmd.PersistentFlags().StringVar(&ConfigFile, "config", defaultConfigFile, description)
+	rootCmd.PersistentFlags().StringVar(&configFile, "config", defaultConfigFile, description)
 
-	RootCmd.AddCommand(list.Cmd)
-	RootCmd.AddCommand(raw.Cmd)
-	RootCmd.AddCommand(config.Cmd)
+	rootCmd.AddCommand(list.Cmd)
+	rootCmd.AddCommand(raw.Cmd)
+	rootCmd.AddCommand(config.Cmd)
 }
 
 func initConfig() {
-	if _, err := os.Stat(ConfigFile); os.IsNotExist(err) {
-		os.MkdirAll(filepath.Dir(ConfigFile), os.ModeDir|os.ModePerm)
-		os.Create(ConfigFile)
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		os.MkdirAll(filepath.Dir(configFile), os.ModeDir|os.ModePerm)
+		os.Create(configFile)
 	}
 
-	viper.SetConfigFile(ConfigFile)
+	viper.SetConfigFile(configFile)
 
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Println(err)
@@ -63,4 +64,3 @@ func getHomeDirectory() string {
 	}
 	return home
 }
-

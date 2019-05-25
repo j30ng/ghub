@@ -1,6 +1,7 @@
 package root
 
-type IndexResopnse struct {
+// Resopnse Represents the response from the path /.
+type Resopnse struct {
 	Current_user_url                     string
 	Current_user_authorizations_html_url string
 	Authorizations_url                   string

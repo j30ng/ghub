@@ -7,6 +7,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// User makes an API call to the path /user.
 func User(profile profile.Profile) (*UserResponse, error) {
 	response, err := rest.MakeAPICall(profile, "/user")
 	if err != nil {
@@ -19,6 +20,7 @@ func User(profile profile.Profile) (*UserResponse, error) {
 	return &ret, nil
 }
 
+// UserResponse represents the response from the path /user.
 type UserResponse struct {
 	Login string
 }

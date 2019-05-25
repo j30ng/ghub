@@ -10,6 +10,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// Issues makes an API call to the path /search/issues.
 func Issues(profile profile.Profile, query IssuesQuery) (*IssuesResponse, error) {
 	queryString, err := generateQueryString(query)
 	if err != nil {
@@ -42,12 +43,14 @@ func generateQueryString(query IssuesQuery) (string, error) {
 	return "?q=" + strings.Join(queryStringItems, "+"), nil
 }
 
+// IssuesQuery represents the parameters of the query string to the path /search/issues.
 type IssuesQuery struct {
 	Author string
 	State  string
 	Type   string
 }
 
+// IssuesResponse represents the response from the path /search/issues.
 type IssuesResponse struct {
 	Total_count        int
 	Incomplete_results bool
@@ -79,6 +82,7 @@ type IssuesResponse struct {
 	}
 }
 
+// IssuesUser represents a sub-structure used inside IssuesResponse.
 type IssuesUser struct {
 	Login               string
 	Id                  int
@@ -100,6 +104,7 @@ type IssuesUser struct {
 	Site_admin          bool
 }
 
+// IssuesLabel represents a sub-structure used inside IssuesResponse.
 type IssuesLabel struct {
 	Id      int
 	Node_id string
@@ -109,4 +114,5 @@ type IssuesLabel struct {
 	Default bool
 }
 
+// IssuesMilestone represents a sub-structure used inside IssuesResponse.
 type IssuesMilestone interface{}
