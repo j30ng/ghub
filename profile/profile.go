@@ -10,10 +10,10 @@ import (
 
 // Profile represents a user profile, which is stored in & read from the config file
 type Profile struct {
-	Name     string
-	Userid   string
-	Token    string
-	Endpoint string
+	Name       string
+	Userid     string
+	Token      string
+	APIBaseURL string
 }
 
 // Find tests the given predicate against each profile, and returns the first profile
@@ -47,7 +47,7 @@ func WithSameTokenAs(token string) func(Profile) bool {
 }
 
 // Profiles reads in then returns all profiles from the config file. Returns an error,
-// should there be a profile in an undesirable state (with an empty token or an empty endpoint).
+// should there be a profile in an undesirable state (with an empty token or an empty base url).
 func Profiles() ([]Profile, error) {
 	rawProfiles := viper.Get("profiles")
 
@@ -61,8 +61,8 @@ func Profiles() ([]Profile, error) {
 		if profile.Token == "" {
 			return nil, fmt.Errorf("profile[%d].token is empty", i+1)
 		}
-		if profile.Endpoint == "" {
-			return nil, fmt.Errorf("profile[%d].endpoint is empty", i+1)
+		if profile.APIBaseURL == "" {
+			return nil, fmt.Errorf("profile[%d].apibaseurl is empty", i+1)
 		}
 	}
 	return profiles, nil

@@ -27,7 +27,7 @@ func Issues(profile profile.Profile, query IssuesQuery) (*IssuesResponse, error)
 	return &ret, nil
 }
 
-func generateQueryString(query IssuesQuery) (string, error) {
+func generateQueryString(query interface{}) (string, error) {
 	marshalled, err := json.Marshal(query)
 	if err != nil {
 		return "", err
@@ -38,7 +38,9 @@ func generateQueryString(query IssuesQuery) (string, error) {
 	}
 	var queryStringItems []string
 	for k, v := range queryMap {
-		queryStringItems = append(queryStringItems, fmt.Sprintf("%s:%s", k, v))
+		if v != "" {
+			queryStringItems = append(queryStringItems, fmt.Sprintf("%s:%s", strings.ToLower(k), v))
+		}
 	}
 	return "?q=" + strings.Join(queryStringItems, "+"), nil
 }

@@ -9,21 +9,16 @@ import (
 	"github.com/j30ng/ghub/profile"
 )
 
-// MakeRawAPICallWithProfile is identical to MakeRawAPICall, except it takes a profile.Profile
-// as an argument instead.
-func MakeRawAPICallWithProfile(profile profile.Profile, path string) (*string, error) {
-	return MakeRawAPICall(profile.Endpoint, profile.Token, path)
-}
-
-// MakeRawAPICall makes an API call to the URL determined by the arguments passed to it, then
+// MakeRawAPICall makes an API call to the URL passed to it, then
 // returns the response body as a string.
-func MakeRawAPICall(endpoint string, token string, path string) (*string, error) {
-	apiBaseURL := strings.TrimRight(endpoint, "/")
-	fullURL := apiBaseURL + "/" + strings.TrimLeft(path, "/")
-
-	req, err := generateRequest(fullURL, token)
+func MakeRawAPICall(url string, token string, headers map[string]string) (*string, error) {
+	req, err := generateRequest(url, token)
 	if err != nil {
 		return nil, err
+	}
+
+	for k, v := range headers {
+		req.Header.Add(k, v)
 	}
 
 	res, err := (&http.Client{}).Do(req)
@@ -40,10 +35,16 @@ func MakeRawAPICall(endpoint string, token string, path string) (*string, error)
 	return &str, nil
 }
 
-// MakeAPICall makes an API call via MakeRawAPICallWithProfile, tries to convert the response
-// into a map[string]interface{}, then returns the converted response if the conversion was successful.
+// MakeAPICall is like MakeAPICallWithHeaders, except it sets no headers to the request.
 func MakeAPICall(profile profile.Profile, path string) (interface{}, error) {
-	jsonString, err := MakeRawAPICallWithProfile(profile, path)
+	return MakeAPICallWithHeaders(profile, path, map[string]string{})
+}
+
+// MakeAPICallWithHeaders makes an API call via MakeRawAPICall, tries to convert the response
+// into a map[string]interface{}, then returns the converted response if the conversion was successful.
+func MakeAPICallWithHeaders(profile profile.Profile, path string, headers map[string]string) (interface{}, error) {
+	url := strings.TrimRight(profile.APIBaseURL, "/") + "/" + strings.TrimLeft(path, "/")
+	jsonString, err := MakeRawAPICall(url, profile.Token, headers)
 	if err != nil {
 		return nil, err
 	}

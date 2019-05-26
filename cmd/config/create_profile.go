@@ -22,8 +22,8 @@ func init() {
 	createProfileCmd.Flags().StringVar(&newProfile.Token, "token", "", "Personal Access Token (Required)")
 	createProfileCmd.MarkFlagRequired("token")
 
-	createProfileCmd.Flags().StringVarP(&newProfile.Endpoint, "endpoint", "e", "https://api.github.com",
-		"The REST API Endpoint.\nA typical enpoint for a GitHub Enterprise is 'https://[github_enterprise_url]/api/v3'.")
+	createProfileCmd.Flags().StringVarP(&newProfile.APIBaseURL, "baseurl", "b", "https://api.github.com",
+		"The base url.\nA typical base url for a GitHub Enterprise is 'https://[github_enterprise_url]/api/v3'.")
 
 	createProfileCmd.Flags().StringVar(&newProfile.Name, "name", "", "A name for the profile (defaults to 'profile-[loginId]'.)")
 	createProfileCmd.Flags().StringVar(&newProfile.Userid, "userid", "", "Login user ID (defaults to the login id retrieved with the given token.)")
