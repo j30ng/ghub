@@ -21,7 +21,7 @@ var currentProfileCmd = &cobra.Command{
 func init() {
 	Cmd.AddCommand(currentProfileCmd)
 
-	currentProfileCmd.Flags().BoolP("verbose", "v", false, "Print all about the profile in JSON format.")
+	currentProfileCmd.Flags().BoolP("detail", "d", false, "Print detailed information about the profile in JSON format.")
 }
 
 func currentProfileArgs(cmd *cobra.Command, args []string) error {
@@ -36,29 +36,29 @@ func currentProfileRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	verbose, err := cmd.Flags().GetBool("verbose")
+	inDetail, err := cmd.Flags().GetBool("detail")
 	if err != nil {
 		return err
 	}
-	if verbose {
-		if err = printCurrentProfileVerbose(*selectedProfile); err != nil {
+	if inDetail {
+		if err = printlnAsJSON(*selectedProfile); err != nil {
 			return err
 		}
 	} else {
-		printCurrentProfile(*selectedProfile)
+		printlnCurrentProfile(*selectedProfile)
 	}
 	return nil
 }
 
-func printCurrentProfileVerbose(profile profile.Profile) error {
+func printlnAsJSON(in interface{}) error {
 	builder := strings.Builder{}
-	if err := json.NewEncoder(&builder).Encode(profile); err != nil {
+	if err := json.NewEncoder(&builder).Encode(in); err != nil {
 		return err
 	}
 	fmt.Println(builder.String())
 	return nil
 }
 
-func printCurrentProfile(profile profile.Profile) {
+func printlnCurrentProfile(profile profile.Profile) {
 	fmt.Println(profile.Name)
 }
