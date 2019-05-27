@@ -12,7 +12,7 @@ import (
 
 // Issues makes an API call to the path /search/issues.
 func Issues(profile profile.Profile, query IssuesQuery) (*IssuesResponse, error) {
-	queryString, err := generateQueryString(query)
+	queryString, err := reqParamString(query)
 	if err != nil {
 		return nil, err
 	}
@@ -27,26 +27,57 @@ func Issues(profile profile.Profile, query IssuesQuery) (*IssuesResponse, error)
 	return &ret, nil
 }
 
-func generateQueryString(query interface{}) (string, error) {
+func reqParamString(query interface{}) (string, error) {
 	marshalled, err := json.Marshal(query)
 	if err != nil {
 		return "", err
 	}
-	var queryMap map[string]interface{}
-	if err = json.Unmarshal(marshalled, &queryMap); err != nil {
+	var reqParamMap map[string]interface{}
+	if err = json.Unmarshal(marshalled, &reqParamMap); err != nil {
 		return "", err
 	}
-	var queryStringItems []string
-	for k, v := range queryMap {
-		if v != "" {
-			queryStringItems = append(queryStringItems, fmt.Sprintf("%s:%s", strings.ToLower(k), v))
+	var reqParamItems []string
+	for reqParam, paramVal := range reqParamMap {
+		if formattedVal, err := formatParamVal(paramVal); err != nil {
+			return "", err
+		} else if formattedVal != nil {
+			reqParamItems = append(reqParamItems, fmt.Sprintf("%s=%s", strings.ToLower(reqParam), *formattedVal))
 		}
 	}
-	return "?q=" + strings.Join(queryStringItems, "+"), nil
+	return "?" + strings.Join(reqParamItems, "&"), nil
+}
+
+func formatParamVal(paramVal interface{}) (*string, error) {
+	result := ""
+	switch v := paramVal.(type) {
+	case map[string]interface{}:
+		resultItems := []string{}
+		for key, val := range v {
+			if val != "" {
+				resultItems = append(resultItems, fmt.Sprintf("%s:%s", strings.ToLower(key), val))
+			}
+		}
+		result = strings.Join(resultItems, "+")
+	case string:
+		result = v
+	default:
+		return nil, fmt.Errorf("Unexpected paramVal type: %T", v)
+
+	}
+	if result == "" {
+		return nil, nil
+	}
+	return &result, nil
 }
 
 // IssuesQuery represents the parameters of the query string to the path /search/issues.
 type IssuesQuery struct {
+	Q     IssuesQueryQ
+	Sort  string
+	Order string
+}
+
+type IssuesQueryQ struct {
 	Author string
 	State  string
 	Type   string

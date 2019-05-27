@@ -1,7 +1,6 @@
 package search
 
 import (
-	"fmt"
 	"github.com/j30ng/ghub/profile"
 	"github.com/j30ng/ghub/rest"
 	"github.com/mitchellh/mapstructure"
@@ -9,12 +8,11 @@ import (
 
 // Commits makes an API call to the path /search/commits.
 func Commits(profile profile.Profile, query CommitsQuery) (*CommitsResponse, error) {
-	queryString, err := generateQueryString(query)
+	queryString, err := reqParamString(query)
 	if err != nil {
 		return nil, err
 	}
 	headers := map[string]string{"Accept": "application/vnd.github.cloak-preview"}
-	fmt.Println(queryString)
 	response, err := rest.MakeAPICallWithHeaders(profile, "/search/commits"+queryString, headers)
 	if err != nil {
 		return nil, err
@@ -26,8 +24,14 @@ func Commits(profile profile.Profile, query CommitsQuery) (*CommitsResponse, err
 	return &ret, nil
 }
 
-// CommitsQuery represents the parameters of the query string to the path /search/commits.
 type CommitsQuery struct {
+	Q     CommitsQueryQ
+	Sort  string
+	Order string
+}
+
+// CommitsQuery represents the parameters of the query string to the path /search/commits.
+type CommitsQueryQ struct {
 	Author    string
 	Committer string
 	Org       string
