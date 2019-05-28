@@ -23,6 +23,8 @@ func init() {
 
 	issueCmd.Flags().BoolVar(&issueFlags.Mine, "mine", false, "List issues I filed. (Set by default; use --author to override.)")
 	issueCmd.Flags().StringVarP(&issueFlags.Author, "author", "a", "", "Specify the author (must not be used with explicit --mine)")
+	issueCmd.Flags().BoolVar(&issueFlags.Open, "open", false, "List open issues.")
+	issueCmd.Flags().BoolVar(&issueFlags.Closed, "closed", false, "List closed issues.")
 	issueCmd.Flags().StringVar(&issueFlags.Order, "order", "desc", "Whether to print the output in descending or ascending order. (desc, asc)")
 	issueCmd.Flags().IntVarP(&issueFlags.Cols, "cols", "c", 120, "Fold lines longer than this value. 0 indicates no folding. (>= 0)")
 	issueCmd.Flags().IntVar(&issueFlags.OutputSizeLimit, "limit", 0, "The max number of output elements to print. 0 indicates no limit. (>= 0)")
@@ -33,6 +35,9 @@ func init() {
 var issueFlags struct {
 	Author          string
 	Mine            bool
+	Open            bool
+	Closed          bool
+	States          []string
 	Order           string
 	SortBy          string
 	Cols            int
@@ -54,6 +59,16 @@ func issueArgs(cmd *cobra.Command, args []string) error {
 		}
 		issueFlags.Author = selectedProfile.Userid
 	}
+	if !issueFlags.Open && !issueFlags.Closed {
+		issueFlags.Open, issueFlags.Closed = true, true
+	}
+	if issueFlags.Open {
+		issueFlags.States = append(issueFlags.States, "open")
+	}
+	if issueFlags.Closed {
+		issueFlags.States = append(issueFlags.States, "closed")
+	}
+
 	switch issueFlags.SortBy {
 	case "comments", "reactions", "reactions-+1", "reactions--1", "reactions-smile", "reactions-thinking_face", "reactions-heart", "reactions-tada", "interactions", "created", "updated":
 	default:
@@ -74,7 +89,7 @@ func issueRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return errors.New("An error occurred while loading profile.\n\n" + err.Error())
 	}
-	query := search.IssuesQuery{Q: search.IssuesQueryQ{Author: issueFlags.Author, Type: "issue"}, Order: issueFlags.Order, Sort: issueFlags.SortBy}
+	query := search.IssuesQuery{Q: search.IssuesQueryQ{Author: []string{issueFlags.Author}, Type: []string{"issue"}, State: issueFlags.States}, Order: issueFlags.Order, Sort: issueFlags.SortBy}
 	response, err := search.Issues(*profile, query)
 	if err != nil {
 		return errors.New("An error occurred while making an API call.\n\n" + err.Error())
@@ -89,22 +104,23 @@ func issueFormatResponse(res *search.IssuesResponse, order string, cols int, siz
 		if size > 0 && i >= size {
 			break
 		}
-
-		itemString := strings.Join([]string{
-			"------------------------------------------------",
-			color.RedString("[%s] ", item.State) + fmt.Sprintf("%s", item.Title),
-			color.YellowString("URL: %s", item.Html_url),
-			color.CyanString("Updated At: %s", reformatDate(item.Updated_at)) + " / " + color.CyanString("Created At: %s", reformatDate(item.Created_at)),
-			"",
-			wrapString(item.Body, cols, 2),
-		}, "\n")
-
-		result = append([]string{itemString}, result...)
+		result = append([]string{formatIssueResponseItem(&item, cols)}, result...)
 	}
-	return strings.Join(result, "\n")
+	line := "------------------------------------------------"
+	return line + "\n" + strings.Join(result, "\n" + line + "\n") + "\n" + line
 }
 
-func wrapString(in string, cols int, indent int) string {
+func formatIssueResponseItem(item *search.IssuesResponseItem, cols int) string {
+	return strings.Join([]string{
+		color.RedString("[%s] ", item.State) + fmt.Sprintf("%s", item.Title),
+		color.YellowString("URL: %s", item.Html_url),
+		color.CyanString("Updated At: %s", reformatDate(item.Updated_at)) + " / " + color.CyanString("Created At: %s", reformatDate(item.Created_at)),
+		"",
+		foldString(item.Body, cols, 2),
+	}, "\n")
+}
+
+func foldString(in string, cols int, indent int) string {
 	if indent < 0 {
 		indent = 0
 	}

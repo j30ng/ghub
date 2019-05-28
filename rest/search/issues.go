@@ -54,7 +54,15 @@ func formatParamVal(paramVal interface{}) (*string, error) {
 		resultItems := []string{}
 		for key, val := range v {
 			if val != "" {
-				resultItems = append(resultItems, fmt.Sprintf("%s:%s", strings.ToLower(key), val))
+				switch vv := val.(type) {
+				case string:
+					resultItems = append(resultItems, fmt.Sprintf("%s:%s", strings.ToLower(key), vv))
+				case []interface{}:
+					for _, child := range vv {
+						resultItems = append(resultItems, fmt.Sprintf("%s:%s", strings.ToLower(key), child))
+					}
+				default:
+				}
 			}
 		}
 		result = strings.Join(resultItems, "+")
@@ -78,42 +86,45 @@ type IssuesQuery struct {
 }
 
 type IssuesQueryQ struct {
-	Author string
-	State  string
-	Type   string
+	Author []string
+	State  []string
+	Type   []string
 }
 
 // IssuesResponse represents the response from the path /search/issues.
 type IssuesResponse struct {
 	Total_count        int
 	Incomplete_results bool
-	Items              []struct {
-		Url                string
-		Repository_url     string
-		Labels_url         string
-		Comments_url       string
-		Events_url         string
-		Html_url           string
-		Id                 int
-		Node_id            string
-		Number             int
-		Title              string
-		User               IssuesUser
-		Labels             []IssuesLabel
-		State              string
-		Locked             bool
-		Assignee           IssuesUser
-		Assignees          []IssuesUser
-		Milestone          IssuesMilestone
-		Comments           int
-		Created_at         string
-		Updated_at         string
-		Closed_at          string
-		Author_association string
-		Body               string
-		Score              int
-	}
+	Items              []IssuesResponseItem
 }
+
+type IssuesResponseItem struct {
+	Url                string
+	Repository_url     string
+	Labels_url         string
+	Comments_url       string
+	Events_url         string
+	Html_url           string
+	Id                 int
+	Node_id            string
+	Number             int
+	Title              string
+	User               IssuesUser
+	Labels             []IssuesLabel
+	State              string
+	Locked             bool
+	Assignee           IssuesUser
+	Assignees          []IssuesUser
+	Milestone          IssuesMilestone
+	Comments           int
+	Created_at         string
+	Updated_at         string
+	Closed_at          string
+	Author_association string
+	Body               string
+	Score              int
+}
+
 
 // IssuesUser represents a sub-structure used inside IssuesResponse.
 type IssuesUser struct {

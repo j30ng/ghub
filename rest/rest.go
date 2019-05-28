@@ -12,6 +12,7 @@ import (
 // MakeRawAPICall makes an API call to the URL passed to it, then
 // returns the response body as a string.
 func MakeRawAPICall(url string, token string, headers map[string]string) (*string, error) {
+	println(url)
 	req, err := generateRequest(url, token)
 	if err != nil {
 		return nil, err

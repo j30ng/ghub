@@ -22,6 +22,8 @@ func init() {
 
 	prCmd.Flags().BoolVar(&prFlags.Mine, "mine", false, "List my pull requests. (Set by default; use --author to override.)")
 	prCmd.Flags().StringVarP(&prFlags.Author, "author", "a", "", "Specify the author (must not be used with explicit --mine)")
+	prCmd.Flags().BoolVar(&prFlags.Open, "open", false, "List open pull requests.")
+	prCmd.Flags().BoolVar(&prFlags.Closed, "closed", false, "List closed pull requests.")
 	prCmd.Flags().StringVar(&prFlags.Order, "order", "desc", "Whether to print the output in descending or ascending order.")
 	prCmd.Flags().IntVarP(&prFlags.Cols, "cols", "c", 120, "Fold lines longer than this value. 0 indicates no folding.")
 	prCmd.Flags().IntVar(&prFlags.OutputSizeLimit, "limit", 0, "The max number of output elements to print. 0 indicates no limit. (>= 0)")
@@ -33,6 +35,9 @@ func init() {
 var prFlags struct {
 	Author          string
 	Mine            bool
+	Open            bool
+	Closed          bool
+	States          []string
 	Order           string
 	Cols            int
 	SortBy          string
@@ -54,6 +59,15 @@ func prArgs(cmd *cobra.Command, args []string) error {
 		}
 		prFlags.Author = selectedProfile.Userid
 	}
+	if !prFlags.Open && !prFlags.Closed {
+		prFlags.Open, prFlags.Closed = true, true
+	}
+	if prFlags.Open {
+		prFlags.States = append(prFlags.States, "open")
+	}
+	if prFlags.Closed {
+		prFlags.States = append(prFlags.States, "closed")
+	}
 	switch prFlags.SortBy {
 	case "comments", "reactions", "reactions-+1", "reactions--1", "reactions-smile", "reactions-thinking_face", "reactions-heart", "reactions-tada", "interactions", "created", "updated":
 	default:
@@ -74,7 +88,7 @@ func prRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return errors.New("An error occurred while loading profile.\n\n" + err.Error())
 	}
-	query := search.IssuesQuery{Q: search.IssuesQueryQ{Author: prFlags.Author, Type: "pr"}, Order: prFlags.Order, Sort: prFlags.SortBy}
+	query := search.IssuesQuery{Q: search.IssuesQueryQ{Author: []string{prFlags.Author}, Type: []string{"pr"}, State: prFlags.States}, Order: prFlags.Order, Sort: prFlags.SortBy}
 	response, err := search.Issues(*profile, query)
 	if err != nil {
 		return errors.New("An error occurred while making an API call.\n\n" + err.Error())
