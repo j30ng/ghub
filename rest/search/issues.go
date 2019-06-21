@@ -44,7 +44,10 @@ func reqParamString(query interface{}) (string, error) {
 			reqParamItems = append(reqParamItems, fmt.Sprintf("%s=%s", strings.ToLower(reqParam), *formattedVal))
 		}
 	}
-	return "?" + strings.Join(reqParamItems, "&"), nil
+	if len(reqParamItems) > 0 {
+		return "?" + strings.Join(reqParamItems, "&"), nil
+	}
+	return "", nil
 }
 
 func formatParamVal(paramVal interface{}) (*string, error) {
@@ -87,6 +90,8 @@ type IssuesQuery struct {
 
 type IssuesQueryQ struct {
 	Author []string
+	Repo   []string
+	Org    []string
 	State  []string
 	Type   []string
 }

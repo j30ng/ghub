@@ -39,7 +39,7 @@ func runCommitCmdWithError(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	query := search.CommitsQuery{Q: search.CommitsQueryQ{Committer: param.Committers},
+	query := search.CommitsQuery{Q: search.CommitsQueryQ{Committer: param.Committers, Repo: param.Repos},
 		Sort: param.Sort, Order: param.Order}
 	response, err := search.Commits(*profile, query)
 	if err != nil {
@@ -61,25 +61,18 @@ func parseCommitFlag(cmd *cobra.Command) (param *commitCmdParam, err error) {
 	param, err = nil, nil
 
 	param = &commitCmdParam{}
-	err, mine, committers, repos, order, limit, sortBy := getCommitFlagVals(cmd)
+	err, includeMine, csvCommitters, csvRepos, order, limit, sortBy := getCommitFlagVals(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, committer := range strings.Split(committers, ",") {
-		param.Committers = append(param.Committers, strings.TrimSpace(committer))
+	param.Committers, err = determineCommitters(includeMine, csvCommitters)
+	if err != nil {
+		return nil, err
 	}
-	for _, repo := range strings.Split(repos, ",") {
+
+	for _, repo := range strings.Split(csvRepos, ",") {
 		param.Repos = append(param.Repos, strings.TrimSpace(repo))
-	}
-
-
-	if mine {
-		profile, err := profile.SelectedProfile();
-		if err != nil {
-			return nil, err
-		}
-		param.Committers = append(param.Committers, profile.Userid)
 	}
 
 	if order != "desc" && order != "asc" {
@@ -113,6 +106,36 @@ func getCommitFlagVals(cmd *cobra.Command) (err error, mine bool, committers str
 	return
 }
 
+func determineCommitters(includeMine bool, csvCommitters string) (committers []string, err error) {
+	for _, committer := range strings.Split(csvCommitters, ",") {
+		trimmedCommitter := strings.TrimSpace(committer)
+		if trimmedCommitter != "" {
+			committers = append(committers, trimmedCommitter)
+		}
+	}
+
+	if includeMine || len(committers) == 0 {
+		profile, err := profile.SelectedProfile();
+		if err != nil {
+			return nil, err
+		}
+		if !contains(committers, profile.Userid) {
+			committers = append(committers, profile.Userid)
+		}
+	}
+	return
+}
+
+func contains(slice []string, target string) bool {
+	for _, s := range slice {
+		if s == target {
+			return true
+		}
+	}
+	return false
+}
+
+
 func commitFormatResponse(res *search.CommitsResponse, size int) string {
 	result := []string{}
 	for i, item := range res.Items {
@@ -120,6 +143,7 @@ func commitFormatResponse(res *search.CommitsResponse, size int) string {
 			break
 		}
 		result = append([]string{formatCommitResponseItem(&item)}, result...)
+		//result = append(result, formatCommitResponseItem(&item))
 	}
 	line := "------------------------------------------------"
 	return line + "\n" + strings.Join(result, "\n" + line + "\n") + "\n" + line
@@ -142,5 +166,5 @@ func reformatDate(dateString string) string {
 	if err != nil {
 		return err.Error()
 	}
-	return t.Format("2006-01-02 15:04")
+	return t.Local().Format("2006-01-02 15:04")
 }

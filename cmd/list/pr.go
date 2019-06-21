@@ -13,74 +13,116 @@ import (
 var prCmd = &cobra.Command{
 	Use:   "pr",
 	Short: "List pull requests.",
-	Args:  prArgs,
 	RunE:  prRunE,
 }
 
 func init() {
 	Cmd.AddCommand(prCmd)
 
-	prCmd.Flags().BoolVar(&prFlags.Mine, "mine", false, "List my pull requests. (Set by default; use --author to override.)")
-	prCmd.Flags().StringVarP(&prFlags.Author, "author", "a", "", "Specify the author (must not be used with explicit --mine)")
-	prCmd.Flags().BoolVar(&prFlags.Open, "open", false, "List open pull requests.")
-	prCmd.Flags().BoolVar(&prFlags.Closed, "closed", false, "List closed pull requests.")
-	prCmd.Flags().StringVar(&prFlags.Order, "order", "desc", "Whether to print the output in descending or ascending order.")
-	prCmd.Flags().IntVarP(&prFlags.Cols, "cols", "c", 120, "Fold lines longer than this value. 0 indicates no folding.")
-	prCmd.Flags().IntVar(&prFlags.OutputSizeLimit, "limit", 0, "The max number of output elements to print. 0 indicates no limit. (>= 0)")
-	prCmd.Flags().StringVarP(&prFlags.SortBy, "sort-by", "s", "updated",
+	prCmd.Flags().Bool("mine", false, "List my pull requests. (Set by default; use --author to override.)")
+	prCmd.Flags().StringP("authors", "a", "", "Array of authors. Comma-separated.")
+	prCmd.Flags().Bool("all-authors", false, "Search for pull requests by all authors. Overrides --mine and --authors.")
+
+	prCmd.Flags().StringP("repos", "r", "", "Array of repos. Comma-separated.")
+	prCmd.Flags().StringP("orgs", "o", "", "Array of organizations. Comma-separated.")
+	prCmd.Flags().Bool("open", false, "List open pull requests.")
+	prCmd.Flags().Bool("closed", false, "List closed pull requests.")
+	prCmd.Flags().String("order", "desc", "Print the output in descending or ascending order. (desc, asc)")
+	prCmd.Flags().StringP("sort-by", "s", "updated",
 		"Sort the result of the API request by this measure.\n"+"https://developer.github.com/v3/search/#parameters-3")
 
+	prCmd.Flags().IntP("cols", "c", 120, "Fold lines longer than this value. 0 indicates no folding.")
+	prCmd.Flags().Int("limit", 0, "The max number of output elements to print. 0 indicates no limit. (>= 0)")
 }
 
-var prFlags struct {
-	Author          string
-	Mine            bool
-	Open            bool
-	Closed          bool
+type prCmdParam struct {
+	Authors         []string
+	Repos           []string
+	Orgs            []string
 	States          []string
 	Order           string
+	Sort            string
 	Cols            int
-	SortBy          string
-	OutputSizeLimit int
+	OutputCountLimit int
 }
 
-func prArgs(cmd *cobra.Command, args []string) error {
-	switch {
-	case prFlags.Author != "" && !prFlags.Mine:
-	case prFlags.Author != "" && prFlags.Mine:
-		return errors.New("Explicit mixed use of --mine and --author")
-	case prFlags.Author == "" && !prFlags.Mine:
-		prFlags.Mine = true
-		fallthrough
-	case prFlags.Author == "" && prFlags.Mine:
-		selectedProfile, err := profile.SelectedProfile()
-		if err != nil {
-			return err
+func parsePrFlag(cmd *cobra.Command) (param *prCmdParam, err error) {
+	param, err = &prCmdParam{}, nil
+	err, mine, csvAuthors, allAuthors, csvRepos, csvOrgs, open, closed, order, sortBy, cols, limit := getPrFlagVals(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	param.Authors, err = determineAuthors(allAuthors, mine, csvAuthors)
+	if err != nil {
+		return nil, err
+	}
+
+	if csvRepos != "" {
+		for _, repo := range strings.Split(csvRepos, ",") {
+			param.Repos = append(param.Repos, strings.TrimSpace(repo))
 		}
-		prFlags.Author = selectedProfile.Userid
 	}
-	if !prFlags.Open && !prFlags.Closed {
-		prFlags.Open, prFlags.Closed = true, true
+
+	if csvOrgs != "" {
+		for _, org := range strings.Split(csvOrgs, ",") {
+			param.Orgs = append(param.Orgs, strings.TrimSpace(org))
+		}
 	}
-	if prFlags.Open {
-		prFlags.States = append(prFlags.States, "open")
+
+	if order != "desc" && order != "asc" {
+		return nil, errors.New("--order must be either one of (asc, desc)")
 	}
-	if prFlags.Closed {
-		prFlags.States = append(prFlags.States, "closed")
-	}
-	switch prFlags.SortBy {
+	param.Order = order
+
+	switch sortBy {
 	case "comments", "reactions", "reactions-+1", "reactions--1", "reactions-smile", "reactions-thinking_face", "reactions-heart", "reactions-tada", "interactions", "created", "updated":
+		param.Sort = sortBy
 	default:
-		return fmt.Errorf("Invalid value for --sort-by: %s", prFlags.SortBy)
+		return nil, fmt.Errorf("Invalid value for --sort-by: %s", sortBy)
 	}
-	prFlags.Order = strings.ToLower(prFlags.Order)
-	if prFlags.Order != "desc" && prFlags.Order != "asc" {
-		return fmt.Errorf("Invalid value for --order: %s", prFlags.Order)
+
+	if open {
+		param.States = append(param.States, "open")
 	}
-	if prFlags.Cols < 0 {
-		return fmt.Errorf("Invalid value for --cols: %d", prFlags.Cols)
+	if closed {
+		param.States = append(param.States, "closed")
 	}
-	return nil
+
+	if limit < 0 {
+		return nil, fmt.Errorf("--limit must be >= 0; got %d", limit)
+	}
+	param.OutputCountLimit = limit
+
+	if cols < 0 {
+		return nil, fmt.Errorf("--cols must be >= 0; got %d", cols)
+	}
+	param.Cols = cols
+
+	return
+}
+
+func getPrFlagVals(cmd *cobra.Command) (err error, mine bool, csvAuthors string, allAuthors bool, csvRepos string, csvOrgs string, open bool, closed bool, order string, sortBy string, cols int, limit int) {
+	flags := cmd.Flags()
+	mine      , err = flags.GetBool("mine");        if err != nil { return }
+	csvAuthors, err = flags.GetString("authors");   if err != nil { return }
+	allAuthors, err = flags.GetBool("all-authors"); if err != nil { return }
+	csvRepos  , err = flags.GetString("repos");     if err != nil { return }
+	csvOrgs   , err = flags.GetString("orgs");      if err != nil { return }
+	open      , err = flags.GetBool("open");        if err != nil { return }
+	closed    , err = flags.GetBool("closed");      if err != nil { return }
+	order     , err = flags.GetString("order");     if err != nil { return }
+	sortBy    , err = flags.GetString("sort-by");   if err != nil { return }
+	cols      , err = flags.GetInt("cols");         if err != nil { return }
+	limit     , err = flags.GetInt("limit");        if err != nil { return }
+	return
+}
+
+func determineAuthors(includeAll bool, includeMine bool, csvAuthors string) (authors []string, err error) {
+	if includeAll {
+		return
+	}
+	return determineCommitters(includeMine, csvAuthors)
 }
 
 func prRunE(cmd *cobra.Command, args []string) error {
@@ -88,11 +130,15 @@ func prRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return errors.New("An error occurred while loading profile.\n\n" + err.Error())
 	}
-	query := search.IssuesQuery{Q: search.IssuesQueryQ{Author: []string{prFlags.Author}, Type: []string{"pr"}, State: prFlags.States}, Order: prFlags.Order, Sort: prFlags.SortBy}
+	param, err := parsePrFlag(cmd)
+	if err != nil {
+		return err
+	}
+	query := search.IssuesQuery{Q: search.IssuesQueryQ{Author: param.Authors, Repo: param.Repos, Org: param.Orgs, Type: []string{"pr"}, State: param.States}, Order: param.Order, Sort: param.Sort}
 	response, err := search.Issues(*profile, query)
 	if err != nil {
 		return errors.New("An error occurred while making an API call.\n\n" + err.Error())
 	}
-	fmt.Println(issueFormatResponse(response, prFlags.Order, prFlags.Cols, prFlags.OutputSizeLimit))
+	fmt.Println(issueFormatResponse(response, param.Order, param.Cols, param.OutputCountLimit))
 	return nil
 }
